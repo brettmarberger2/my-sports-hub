@@ -46,9 +46,10 @@ function tickerItem(t, rg) {
 }
 async function renderTicker() {
   const res = await Promise.all(FOCUS_KEYS.map(async k => ({ t: TEAMS[k], rg: await safe(API.recentGames(TEAMS[k], 2), null) })));
-  // Live games first, then whoever played most recently.
+  // Same order as the rest of the site: live games first, then whoever plays soonest, then most recent result.
   const lastTs = r => (r.rg?.list?.length ? new Date(r.rg.list[r.rg.list.length - 1].date).getTime() : 0);
-  res.sort((a, b) => (b.rg?.live ? 1 : 0) - (a.rg?.live ? 1 : 0) || lastTs(b) - lastTs(a));
+  const rank = r => (r.rg?.live ? 0 : r.rg?.next ? 1 : 2);
+  res.sort((a, b) => rank(a) - rank(b) || (a.rg?.next?.ts ?? Infinity) - (b.rg?.next?.ts ?? Infinity) || lastTs(b) - lastTs(a));
   $('#ticker .ticker-inner').innerHTML = `<div class="ticker-label"><span class="livedot"></span> Latest</div>${res.map(r => tickerItem(r.t, r.rg)).join('')}`;
 }
 

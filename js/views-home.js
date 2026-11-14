@@ -122,8 +122,13 @@ async function viewHome({ mount, alive }) {
       return { k, t, info, gs, pic };
     }));
     if (!alive()) return;
-    $$('#heroTiles .hero-tile').forEach((el, i) => {
-      const { info: inf, pic, k, t, gs } = stats[i];
+    // Whoever is playing right now leads the page, then whoever plays soonest; teams in the offseason go last.
+    const rank = s => (s.gs?.live ? 0 : s.gs?.next && !s.pic?.offseason ? 1 : 2);
+    stats.sort((a, b) => rank(a) - rank(b) || (a.gs?.next?.ts ?? Infinity) - (b.gs?.next?.ts ?? Infinity));
+    const tiles = $('#heroTiles');
+    stats.forEach(({ info: inf, pic, k, t, gs }) => {
+      const el = $(`#ht-${k}`); if (!el) return;
+      tiles.appendChild(el);
       el.querySelector('.rc').innerHTML = `${inf && (inf.w + inf.l + inf.tie) > 0 ? esc(inf.summary) : '—'}<small>${esc(inf?.standingSummary || 'Record')}</small>`;
       if (pic) $(`#hs-${k}`).textContent = pic.statusShort;
       el.classList.toggle('off', !!pic?.offseason);
