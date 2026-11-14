@@ -126,9 +126,8 @@ function pollCardHtml(poll, t, { limit = 25 } = {}) {
 }
 
 async function tabCollegeOverview(t, { mount, alive }) {
-  mount.innerHTML = `<div class="split"><div class="stack">
+  mount.innerHTML = `<div class="card brief" id="ovBrief">${spinner('Catching you up…')}</div><div class="split"><div class="stack">
       <div class="card" id="ovGames">${spinner()}</div>
-      <div class="card" id="ovNews">${spinner()}</div>
       <div class="card" id="ovLast">${spinner('Loading last game…')}</div>
       <div class="card"><h3>${esc(t.conf)} standings</h3><div id="ovStd">${spinner()}</div></div>
     </div><div class="stack">
@@ -149,7 +148,7 @@ async function tabCollegeOverview(t, { mount, alive }) {
   drawGames(); App.every(() => alive() && drawGames(), 45000);
   gsP.then(gs => lastGameCard(t, gs, alive));
   stdP.then(s => { if (alive()) $('#ovStd').innerHTML = s ? collegeStandingsTable(s, t, { windowAround: true }) + `<a class="btn small" style="margin-top:12px" href="#/team/${t.key}/picture">Full ${esc(t.conf)} standings →</a>` : errBox('Standings unavailable.'); });
-  newsP.then(n => { if (alive()) overviewNews(t, $('#ovNews'), n); });
+  renderBrief(t, $('#ovBrief'), alive).catch(e => { console.error(e); if (alive()) $('#ovBrief').innerHTML = errBox('The season briefing could not be built right now.'); });
   rankP.then(ranks => {
     if (!alive()) return;
     const main = ranks.find(r => r.short === 'CFP') || ranks.find(r => r.short === 'AP') || ranks[0];

@@ -1,7 +1,8 @@
 /* Team news: a "Top news" card on the Overview (lead story + next few) and a full News tab.
    Stories that ESPN tags to this team come first; everything else in the team feed goes under "Around the league". */
 
-const NEWS_KIND = a => (a.type && !/^story$/i.test(a.type) ? a.type : '');
+const NEWS_KIND = a => (/^(preview|recap)$/i.test(a.type || '') ? capFirstWord(a.type) : '');
+const capFirstWord = s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
 function newsLead(a, t) {
   return `<a class="feature nlead" href="${esc(a.link)}" target="_blank" rel="noopener" style="background-image:url('${esc(a.img || '')}')"><div class="in">

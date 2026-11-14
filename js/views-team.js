@@ -56,9 +56,8 @@ function standingsTable(std, t) {
 }
 
 async function tabOverview(t, { mount, alive }) {
-  mount.innerHTML = `<div id="ovPs"></div><div class="split"><div class="stack">
+  mount.innerHTML = `<div id="ovPs"></div><div class="card brief" id="ovBrief">${spinner('Catching you up…')}</div><div class="split"><div class="stack">
       <div class="card" id="ovGames">${spinner()}</div>
-      <div class="card" id="ovNews">${spinner()}</div>
       <div class="card" id="ovLast">${spinner('Loading last game…')}</div>
       <div class="card"><h3>Standings</h3><div id="ovStd">${spinner()}</div></div>
       <div class="card"><h3>Team leaders</h3><div id="ovLead">${spinner()}</div></div>
@@ -102,7 +101,7 @@ async function tabOverview(t, { mount, alive }) {
     if (!alive()) return;
     $('#ovLead').innerHTML = l?.length ? `<div class="stars">${l.map(x => leaderTileHtml(t, x)).join('')}</div><p class="small dim" style="margin-top:8px">${t.league === 'nba' && l[0]?.year != null ? 'Last season. ' : ''}Tap a tile for the full leaderboard.</p>` : `<div class="muted small">Season leaders will appear once games have been played.</div>`;
   });
-  newsP.then(n => { if (alive()) overviewNews(t, $('#ovNews'), n); });
+  renderBrief(t, $('#ovBrief'), alive).catch(e => { console.error(e); if (alive()) $('#ovBrief').innerHTML = errBox('The season briefing could not be built right now.'); });
 
   const [info, gs, roster, std] = await Promise.all([infoP, gsP, rosterP, stdP]);
   if (!alive()) return;
