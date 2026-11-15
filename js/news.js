@@ -19,12 +19,20 @@ function newsSplit(list) {
   return mine.length ? { top: mine, rest } : { top: [...list].sort(byNew), rest: [] };
 }
 
+/** Offseason teams: the story is the moves, not the last box score. Newest team-tagged headlines as compact rows. */
+function offNewsRows(t, list, n = 3) {
+  if (list == null) return `<div class="offrow dim">Loading the latest moves…</div>`;
+  const top = list.length ? newsSplit(list).top.slice(0, n) : [];
+  if (!top.length) return `<div class="offrow dim">No offseason headlines right now. <a href="#/team/${t.key}/news">News ›</a></div>`;
+  return top.map(a => `<a class="offrow" href="${esc(a.link)}" target="_blank" rel="noopener"><span class="t">${esc(a.title)}</span><span class="dim small">${ago(a.date)}</span></a>`).join('');
+}
+
 /** Overview card: the lead story with its picture, then the next three headlines. */
-function overviewNews(t, el, list) {
+function overviewNews(t, el, list, title = 'Top news') {
   if (!el) return;
-  if (!list?.length) { el.innerHTML = `<h3>Top news</h3>${errBox('No headlines right now.')}`; return; }
+  if (!list?.length) { el.innerHTML = `<h3>${esc(title)}</h3>${errBox('No headlines right now.')}`; return; }
   const { top } = newsSplit(list), lead = top.find(a => a.img) || top[0], more = top.filter(a => a !== lead).slice(0, 3);
-  el.innerHTML = `<div class="row between"><h3 style="margin:0">Top news</h3><a class="small" href="#/team/${t.key}/news">All ${esc(t.nick)} news ›</a></div>
+  el.innerHTML = `<div class="row between"><h3 style="margin:0">${esc(title)}</h3><a class="small" href="#/team/${t.key}/news">All ${esc(t.nick)} news ›</a></div>
     <div class="nlead-wrap">${newsLead(lead, t)}</div>${more.map(newsRow).join('')}`;
 }
 

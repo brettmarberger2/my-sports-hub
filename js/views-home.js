@@ -42,6 +42,7 @@ async function viewHome({ mount, alive }) {
       <div>
         <div class="tri"><span></span><span></span><span></span></div>
         <h1>My sports,<br><em>right now.</em></h1>
+        <a class="nowline" id="nowLine" href="javascript:void(0)" hidden></a>
         <p class="lede">Game days, odds, lineups, standings and news for the Eagles and 76ers, plus Indiana football and basketball. The Phillies are in the offseason. Every season since ${yr.min} is in the history section.</p>
         <div class="herobtns">
           <a class="btn primary" style="--team:#0b1a30" href="javascript:void(0)" data-qv>⚡ Game day</a>
@@ -54,12 +55,13 @@ async function viewHome({ mount, alive }) {
         </div>
         <form class="yearjump" id="yjForm" style="margin-top:14px" autocomplete="off"><input type="number" id="yjIn" inputmode="numeric" min="${yr.min}" max="${new Date().getFullYear()}" placeholder="Jump to any year" aria-label="Jump to a year"><button type="submit">Jump →</button></form>
       </div>
-      <div class="hero-tiles now-tiles" id="heroTiles">${LIVE_KEYS.map(k => `<div class="hero-tile" id="ht-${k}" style="--c1:${TEAMS[k].primary}"><a class="ht-top" href="#/team/${k}"><img src="${teamLogoOn(TEAMS[k])}" alt=""><div><div class="nm">${TEAMS[k].nick}</div><div class="sub" id="hs-${k}">${TEAMS[k].sportName}</div></div><div class="rc">—<small>Record</small></div></a><div class="ht-games" id="hg-${k}"><span class="ht-g dim">Loading games…</span></div></div>`).join('')}</div>
+      <div><div class="tiles-cap">Ordered by who's playing now, then who plays next</div>
+      <div class="hero-tiles now-tiles" id="heroTiles">${LIVE_KEYS.map(k => `<div class="hero-tile" id="ht-${k}" style="--c1:${TEAMS[k].primary}"><a class="ht-top" href="#/team/${k}"><img src="${teamLogoOn(TEAMS[k])}" alt=""><div><div class="nm">${TEAMS[k].nick}<span class="ht-tag" id="htt-${k}" hidden></span></div><div class="sub" id="hs-${k}">${TEAMS[k].sportName}</div></div><div class="rc">—<small>Record</small></div></a><div class="ht-games" id="hg-${k}"><span class="ht-g dim">Loading games…</span></div></div>`).join('')}</div></div>
     </div></section>
     <div id="upNext"></div>
     <div id="liveStrip"></div>
     <section class="section home-news" id="nw"><div class="row between" style="align-items:baseline"><h2>Top news</h2><a class="btn small" href="#/news">All news →</a></div><div id="homeNews">${spinner('Loading headlines…')}</div></section>
-    <section class="section" id="gd"><h2>Game day</h2><div class="grid g3" id="teamCards">${LIVE_KEYS.map(k => `<div class="card">${spinner()}</div>`).join('')}</div></section>
+    <section class="section" id="gd"><h2>Game day</h2><p class="section-sub">Live games first, then whoever plays next. Offseason teams sit last.</p><div class="grid g3" id="teamCards">${LIVE_KEYS.map(k => `<div class="card">${spinner()}</div>`).join('')}</div></section>
     <section class="section" id="up"><h2>Coming up</h2><div class="card" id="upcoming">${spinner('Loading schedules…')}</div></section>
     <section class="section" id="st"><h2>Standings</h2><p class="section-sub">Where each team sits right now. Tap a card for the full playoff picture and every division.</p><div class="grid g3" id="stdSnap">${LIVE_KEYS.map(() => `<div class="card">${spinner()}</div>`).join('')}</div></section>
     <section class="section" id="ld"><h2>League leaders</h2><p class="section-sub">The top of each league, with Philly players highlighted. Tap any list for the full leaderboard.</p><div id="ldSnap">${spinner('Loading leaders…')}</div></section>
@@ -115,6 +117,10 @@ async function viewHome({ mount, alive }) {
     $('#iconCards').innerHTML = phillyIconCards(list);
   });
   phillySkyline().then(url => { if (!alive() || !url) return; const h = $('.hero'); h.style.setProperty('--skyline', `url('${url}')`); h.classList.add('photo'); });
+  // Headlines per team, filled once the news feeds arrive; offseason tiles and cards read from it on every redraw.
+  const newsByKey = {};
+  const offTileChip = k => { const a = newsByKey[k]?.length ? newsSplit(newsByKey[k]).top[0] : null; return `<a class="ht-g offchip" href="${a ? esc(a.link) : `#/news?team=${k}`}" ${a ? 'target="_blank" rel="noopener"' : ''} data-offtile="${k}"><span class="l">OFFSEASON MOVES</span><span class="ttl">${a ? esc(a.title) : newsByKey[k] ? 'Latest news ›' : 'Loading…'}</span></a>`; };
+  const fillOffNews = () => { $$('[data-offnews]').forEach(el => { el.innerHTML = offNewsRows(TEAMS[el.dataset.offnews], newsByKey[el.dataset.offnews]); }); $$('[data-offtile]').forEach(el => { el.outerHTML = offTileChip(el.dataset.offtile); }); };
   const draw = async () => {
     const stats = await Promise.all(LIVE_KEYS.map(async k => {
       const t = TEAMS[k];
@@ -125,16 +131,22 @@ async function viewHome({ mount, alive }) {
     // Whoever is playing right now leads the page, then whoever plays soonest; teams in the offseason go last.
     const rank = s => (s.gs?.live ? 0 : s.gs?.next && !s.pic?.offseason ? 1 : 2);
     stats.sort((a, b) => rank(a) - rank(b) || (a.gs?.next?.ts ?? Infinity) - (b.gs?.next?.ts ?? Infinity));
-    const tiles = $('#heroTiles');
-    stats.forEach(({ info: inf, pic, k, t, gs }) => {
+    const tiles = $('#heroTiles'), anyLive = stats.some(s => s.gs?.live);
+    stats.forEach(({ info: inf, pic, k, t, gs }, i) => {
       const el = $(`#ht-${k}`); if (!el) return;
       tiles.appendChild(el);
       el.querySelector('.rc').innerHTML = `${inf && (inf.w + inf.l + inf.tie) > 0 ? esc(inf.summary) : '—'}<small>${esc(inf?.standingSummary || 'Record')}</small>`;
       if (pic) $(`#hs-${k}`).textContent = pic.statusShort;
       el.classList.toggle('off', !!pic?.offseason);
-      const chip = (lab, g) => (g ? `<a class="ht-g" href="javascript:void(0)" data-game="${gameRef(t, g)}"><span class="l">${lab}</span>${g.state === 'in' ? `<b>${g.ourScore ?? 0}–${g.oppScore ?? 0}</b> ${g.home ? 'vs' : '@'} ${esc(g.opp.abbr || g.opp.short)} <span class="lv">${esc(g.detail)}</span>` : g.state === 'post' ? `<b class="${g.result === 'W' ? 'w' : 'l'}">${g.result} ${g.ourScore}–${g.oppScore}</b> ${g.home ? 'vs' : '@'} ${esc(g.opp.abbr || g.opp.short)}` : `${g.home ? 'vs' : '@'} ${esc(g.opp.abbr || g.opp.short)} · ${esc(whenShort(g.date, g.tbd))}`}</a>` : '');
-      $(`#hg-${k}`).innerHTML = (gs?.live ? chip('LIVE', gs.live) : chip('LAST', gs?.last)) + chip('NEXT', gs?.next) || '<span class="ht-g dim">No games scheduled</span>';
+      el.classList.toggle('is-live', !!gs?.live);
+      // One loud tag per tile: LIVE NOW while they play, NEXT UP on the first team waiting (only when nobody is live), OFFSEASON when done.
+      const tagTxt = gs?.live ? 'Live now' : pic?.offseason ? 'Offseason' : (!anyLive && i === 0 && gs?.next) ? 'Next up' : '';
+      const tag = $(`#htt-${k}`); tag.hidden = !tagTxt; tag.textContent = tagTxt; tag.className = 'ht-tag' + (gs?.live ? ' live' : pic?.offseason ? ' off' : '');
+      const chip = (lab, g) => (g ? `<a class="ht-g${g.state === 'in' ? ' live' : ''}" href="javascript:void(0)" data-game="${gameRef(t, g)}"><span class="l">${lab}</span>${g.state === 'in' ? `<b>${g.ourScore ?? 0}–${g.oppScore ?? 0}</b> ${g.home ? 'vs' : '@'} ${esc(g.opp.abbr || g.opp.short)} <span class="lv">${esc(g.detail)}</span>` : g.state === 'post' ? `<b class="${g.result === 'W' ? 'w' : 'l'}">${g.result} ${g.ourScore}–${g.oppScore}</b> ${g.home ? 'vs' : '@'} ${esc(g.opp.abbr || g.opp.short)}` : `${g.home ? 'vs' : '@'} ${esc(g.opp.abbr || g.opp.short)} · ${esc(whenShort(g.date, g.tbd))}`}</a>` : '');
+      // In the offseason the tile talks about the moves, not a box score from weeks ago.
+      $(`#hg-${k}`).innerHTML = pic?.offseason ? offTileChip(k) : (gs?.live ? chip('LIVE', gs.live) : chip('LAST', gs?.last)) + chip('NEXT', gs?.next) || '<span class="ht-g dim">No games scheduled</span>';
     });
+    homeNowLine(stats);
     homeUpNext(stats);
     homeUpcoming(stats);
     homeStandings(stats);
@@ -147,8 +159,8 @@ async function viewHome({ mount, alive }) {
         <div class="body">
           ${pic ? `<a class="pstrip tone-${pic.tone}" href="#/team/${k}/picture"><span class="pl">${pic.offseason ? 'SEASON RECAP' : pic.college ? 'RANKINGS' : pic.kind === 'nba' && pic.fin ? 'LAST SEASON' : 'PLAYOFF PICTURE'}</span><b>${esc(pic.headline)}</b><span class="ps">${esc(pic.sub)}</span></a>` : ''}
           ${gs?.live ? gameBox(t, gs.live, 'LIVE') : ''}
-          ${!gs?.live ? (pic?.offseason ? `<div class="gamebox"><div class="lab"><span>OFFSEASON</span></div><div class="muted small">The ${esc(t.nick)} are done for ${nowYear()}. Spring training opens in February; roster moves and headlines are on the team page.</div></div>` : gameBox(t, gs?.next, 'NEXT')) : ''}
-          ${gameBox(t, gs?.last, 'LAST')}
+          ${!gs?.live ? (pic?.offseason ? `<div class="gamebox offbox"><div class="lab"><span>OFFSEASON MOVES</span><a class="small" href="#/news?team=${k}">All ${esc(t.nick)} news ›</a></div><div data-offnews="${k}">${offNewsRows(t, newsByKey[k])}</div><div class="dim small" style="margin-top:8px">Spring training opens in February${gs?.last ? ` · final game: <a href="javascript:void(0)" data-game="${gameRef(t, gs.last)}">${esc(gs.last.result)} ${gs.last.ourScore}–${gs.last.oppScore} ${gs.last.home ? 'vs' : '@'} ${esc(gs.last.opp.abbr || gs.last.opp.short)}</a>` : ''}</div></div>` : gameBox(t, gs?.next, 'NEXT')) : ''}
+          ${pic?.offseason ? '' : gameBox(t, gs?.last, 'LAST')}
           <div class="row small muted" style="margin-top:auto">${tot ? `<span>🏆 ${tot.titles} titles</span><span>📈 ${tot.w}–${tot.l}${tot.t ? '–' + tot.t : ''} all-time</span>` : `<span>${esc(t.conf)} · Bloomington, IN</span>`}<a href="#/team/${k}" style="margin-left:auto;font-weight:700">Team hub →</a></div>
         </div></div>`;
     }).join('');
@@ -162,6 +174,8 @@ async function viewHome({ mount, alive }) {
 
   const lists = await Promise.all(LIVE_KEYS.map(k => safe(API.news(TEAMS[k], 12), [])));
   if (!alive()) return;
+  LIVE_KEYS.forEach((k, i) => { newsByKey[k] = lists[i] || []; });
+  fillOffNews();
   homeNewsHtml($('#homeNews'), lists);
 }
 
@@ -209,6 +223,20 @@ function countdown(iso) {
   if (m < 24 * 60) return `Starts in ${Math.floor(m / 60)}h ${m % 60}m`;
   return `In ${Math.round(m / 1440)} day${Math.round(m / 1440) === 1 ? '' : 's'}`;
 }
+/** The one-line answer to "who's on right now?", pinned under the hero headline. */
+function homeNowLine(stats) {
+  const el = $('#nowLine'); if (!el) return;
+  const live = stats.filter(s => s.gs?.live);
+  const nxt = stats.find(s => s.gs?.next && !s.pic?.offseason);
+  const s = live[0] || nxt;
+  if (!s) { el.hidden = true; return; }
+  const g = live[0] ? s.gs.live : s.gs.next, t = s.t;
+  el.hidden = false; el.classList.toggle('live', !!live[0]); el.dataset.game = gameRef(t, g);
+  el.innerHTML = live[0]
+    ? `<span class="nl-tag">● Live now</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.ourScore ?? 0}–${g.oppScore ?? 0} ${g.home ? 'vs' : 'at'} ${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(g.detail)}${live.length > 1 ? ` · +${live.length - 1} more live` : ''}</span><span class="nl-go">Watch ›</span>`
+    : `<span class="nl-tag">Next up</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.home ? 'vs' : 'at'} ${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(whenTxt(g.date, g.tbd))}${g.tv ? ' · ' + esc(g.tv) : ''}</span><span class="nl-go">Preview ›</span>`;
+}
+
 /** Big banner for the very next Philly game (or every game that's live right now). */
 function homeUpNext(stats) {
   const el = $('#upNext'); if (!el) return;

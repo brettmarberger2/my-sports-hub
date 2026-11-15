@@ -78,7 +78,7 @@ async function renderBrief(t, el, alive) {
   /* What's next */
   let next = '';
   const g = gs?.live || gs?.next;
-  if (off) next = `Spring training opens in February. Roster moves and offseason headlines are in <a href="#/team/${t.key}/news">News</a>.`;
+  if (off) next = `Spring training opens in February. Until then the story is the roster: free agency, trades and extensions. The latest moves are listed under <b>Offseason moves</b> on this page, and the full feed is in <a href="#/team/${t.key}/news">News</a>.`;
   else if (g) {
     let proj = '';
     if (!t.mlbId) { const s = await T(6000)(safe(API.gameSummary('espn', t.league, g.id), null)); const p = s?.predict?.[String(t.espnId)]; if (p != null) { const pr = p.toFixed(0); proj = ` · ESPN gives them ${/^(8|11$|18$)/.test(pr) ? 'an' : 'a'} <b>${pr}%</b> chance`; } }
@@ -93,9 +93,9 @@ async function renderBrief(t, el, alive) {
         <h4>How it's gone</h4><ul class="brief-list">${how.map(x => `<li>${x}</li>`).join('')}</ul>
         ${who ? `<h4>Who's carrying them</h4><ul class="brief-list people">${who}</ul>` : ''}
         ${health ? `<h4>Health</h4><p>${health}</p>` : ''}
-        <h4>${gs?.live ? 'Right now' : "What's next"}</h4><p>${next}</p>
+        <h4>${gs?.live ? 'Right now' : off ? 'The offseason' : "What's next"}</h4><p>${next}</p>
       </div>
       <div class="brief-news" id="briefNews"></div>
     </div>`;
-  overviewNews(t, $('#briefNews'), news);
+  overviewNews(t, $('#briefNews'), news, off ? 'Offseason moves' : 'Top news');
 }

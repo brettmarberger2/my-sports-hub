@@ -42,7 +42,7 @@ function tickerItem(t, rg) {
   const first = rg.live ? `<span class="badge live" style="padding:1px 7px">Live</span> ${rg.live.ourScore ?? 0}–${rg.live.oppScore ?? 0} ${rg.live.home ? 'vs' : '@'} ${esc(rg.live.opp.abbr || rg.live.opp.short)} <span class="lab">${esc(rg.live.detail)}</span>` : recent[0] ? `${res(recent[0])}` : 'No games yet';
   const second = rg.live ? (recent[0] ? `Last: ${res(recent[0])}` : '') : recent[0] ? `${esc(fmtDate(recent[0].date, { month: 'short', day: 'numeric' }))}${recent[1] ? ` · Prev: ${res(recent[1])}` : ''}` : '';
   const tg = rg.live || recent[0];
-  return `<a class="tk" href="${tg ? 'javascript:void(0)' : '#/team/' + t.key + '/schedule'}" ${tg ? `data-game="${gameRef(t, tg)}"` : ''}><img src="${teamLogo(t)}" alt=""><div><div class="l1"><span>${esc(NAV_SHORT[t.key] || t.nick)}</span> ${first}</div>${second ? `<div class="l2">${second}</div>` : ''}</div></a>`;
+  return `<a class="tk${rg.live ? ' live' : ''}" href="${tg ? 'javascript:void(0)' : '#/team/' + t.key + '/schedule'}" ${tg ? `data-game="${gameRef(t, tg)}"` : ''}><img src="${teamLogo(t)}" alt=""><div><div class="l1"><span>${esc(NAV_SHORT[t.key] || t.nick)}</span> ${first}</div>${second ? `<div class="l2">${second}</div>` : ''}</div></a>`;
 }
 async function renderTicker() {
   const res = await Promise.all(FOCUS_KEYS.map(async k => ({ t: TEAMS[k], rg: await safe(API.recentGames(TEAMS[k], 2), null) })));
@@ -50,7 +50,8 @@ async function renderTicker() {
   const lastTs = r => (r.rg?.list?.length ? new Date(r.rg.list[r.rg.list.length - 1].date).getTime() : 0);
   const rank = r => (r.rg?.live ? 0 : r.rg?.next ? 1 : 2);
   res.sort((a, b) => rank(a) - rank(b) || (a.rg?.next?.ts ?? Infinity) - (b.rg?.next?.ts ?? Infinity) || lastTs(b) - lastTs(a));
-  $('#ticker .ticker-inner').innerHTML = `<div class="ticker-label"><span class="livedot"></span> Latest</div>${res.map(r => tickerItem(r.t, r.rg)).join('')}`;
+  const anyLive = res.some(r => r.rg?.live);
+  $('#ticker .ticker-inner').innerHTML = `<div class="ticker-label${anyLive ? ' live' : ''}"><span class="livedot"></span> ${anyLive ? 'Live' : 'Latest'}</div>${res.map(r => tickerItem(r.t, r.rg)).join('')}`;
 }
 
 

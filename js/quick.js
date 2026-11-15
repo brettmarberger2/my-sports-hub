@@ -6,7 +6,7 @@ const qvWindow = (rows, id, n = 7) => { if (!rows?.length) return []; const i = 
 
 async function qvPane(t) {
   const [info, gs, pic, news, injr] = await Promise.all([timeout(safe(API.team(t), null), 8000), timeout(safe(API.gameStatus(t), null), 8000), timeout(safe(API.picture(t), null), 8000), timeout(safe(API.news(t, 12), []), 8000, []), timeout(safe(API.injuries(t), null), 8000)]);
-  const g = gs?.live || gs?.next, last = gs?.last, lg = t.league;
+  const off = !!pic?.offseason, g = off ? null : (gs?.live || gs?.next), last = gs?.last, lg = t.league;
   let sum = null, depth = null;
   if (g && !t.mlbId) {
     const [, , id] = gameRef(t, g).split('|');
@@ -27,12 +27,14 @@ async function qvPane(t) {
     <div class="qv-cols">
       <div><h4 class="qv-h">Injuries${injAll.length ? ` <span class="dim">${injAll.length}</span>` : ''}</h4>${inj.length ? inj.map(i => `<div class="pvrow"><span><b>${esc(i.name)}</b> <span class="dim small">${esc(i.pos)}</span></span><span class="badge ${/out|reserve/i.test(i.status) ? 'bad' : ''}">${esc(i.status)}</span></div>`).join('') + (injAll.length > inj.length ? `<a class="small" href="#/team/${t.key}/injuries">+${injAll.length - inj.length} more · full injury report ›</a>` : `<a class="small" href="#/team/${t.key}/injuries">Full injury report ›</a>`) : '<div class="muted small">None listed.</div>'}</div>
       <div><h4 class="qv-h">Projected starters</h4>${starters.length ? starters.map(([p, n]) => `<div class="pvrow"><span class="muted">${esc(p)}</span><b>${esc(n)}</b></div>`).join('') : '<div class="muted small">Not published yet. Open the full preview for the latest.</div>'}</div></div>
-    <a class="btn small primary" style="margin-top:10px" href="javascript:void(0)" data-game="${gameRef(t, g)}">Full preview, lineups &amp; odds ›</a>` : `<div class="qv-game flat"><div class="qv-lab"><span class="qv-tag">${esc(state)}</span></div><div class="muted small">${pic?.offseason ? esc(pic.sub) : 'Nothing on the schedule right now.'}</div></div>`;
+    <a class="btn small primary" style="margin-top:10px" href="javascript:void(0)" data-game="${gameRef(t, g)}">Full preview, lineups &amp; odds ›</a>`
+    : off ? `<div class="qv-game flat offbox"><div class="qv-lab"><span class="qv-tag">Offseason moves</span><a class="small" href="#/team/${t.key}/news" style="margin-left:auto">All ${esc(t.nick)} news ›</a></div>${offNewsRows(t, news, 5)}<div class="dim small" style="margin-top:8px">Spring training opens in February${last ? ` · final game: <a href="javascript:void(0)" data-game="${gameRef(t, last)}">${esc(last.result)} ${last.ourScore}–${last.oppScore} ${last.home ? 'vs' : '@'} ${esc(last.opp.abbr || last.opp.short)}</a>` : ''}</div></div>`
+    : `<div class="qv-game flat"><div class="qv-lab"><span class="qv-tag">${esc(state)}</span></div><div class="muted small">Nothing on the schedule right now.</div></div>`;
 
-  const lastHtml = last ? `<a class="qv-last" href="javascript:void(0)" data-game="${gameRef(t, last)}">${resultChip(last)} <span>${last.home ? 'vs' : '@'} ${esc(last.opp.name)}</span><span class="dim small">${esc(fmtDate(last.date, { month: 'short', day: 'numeric' }))} · box score ›</span></a>` : '';
+  const lastHtml = last && !off ? `<a class="qv-last" href="javascript:void(0)" data-game="${gameRef(t, last)}">${resultChip(last)} <span>${last.home ? 'vs' : '@'} ${esc(last.opp.name)}</span><span class="dim small">${esc(fmtDate(last.date, { month: 'short', day: 'numeric' }))} · box score ›</span></a>` : '';
   const rows = pic ? (pic.college ? qvWindow(pic.scopes[0].rows, ourId) : pic.kind === 'nfl' ? (pic.scopes[0].rows || []) : pic.kind === 'nba' ? qvWindow(pic.scopes[0].rows, ourId) : (pic.scopes[0]?.rows || [])) : [];
   const stand = rows.length ? `<h4 class="qv-h">${pic.college ? esc(t.conf) : pic.kind === 'nba' ? (pic.us.conf === 'East' ? 'Eastern Conference' : 'Western Conference') : esc(shortDiv(pic.us.divName || ''))}</h4><div class="mini qv-mini">${rows.map((r, i) => `<div class="${String(r.id) === ourId ? 'us' : ''}"><span class="s">${pic.kind === 'nba' ? (r.seed ?? i + 1) : (r.divRank ?? i + 1)}</span><img src="${esc(r.logo)}" alt="" onerror="this.style.visibility='hidden'"><b>${esc(r.abbr)}</b><span class="rec">${r.w}-${r.l}${r.t ? '-' + r.t : ''}</span></div>`).join('')}</div>` : '';
-  const topNews = news?.length ? newsSplit(news).top.slice(0, 3) : [];
+  const topNews = news?.length && !off ? newsSplit(news).top.slice(0, 3) : [];   // offseason teams already lead with their moves
   const newsHtml = topNews.length ? `<h4 class="qv-h">Top news <a class="small" href="#/team/${t.key}/news" style="float:right;text-transform:none;letter-spacing:0">All news ›</a></h4>${topNews.map(a => `<a class="news" href="${esc(a.link)}" target="_blank" rel="noopener"><div><div class="t">${esc(a.title)}</div><div class="small muted">${ago(a.date)}</div></div></a>`).join('')}` : '';
   const status = pic ? `<div class="qv-status tone-${pic.tone}"><b>${esc(pic.headline)}</b><span>${esc(pic.sub)}</span></div>` : '';
 
@@ -47,7 +49,7 @@ async function teamsByActivity(keys = LIVE_KEYS) {
   const rank = i => (gss[i]?.live ? 0 : gss[i]?.next ? 1 : 2);
   return keys.map((k, i) => ({ k, live: !!gss[i]?.live, r: rank(i), ts: gss[i]?.next?.ts ?? Infinity })).sort((a, b) => a.r - b.r || a.ts - b.ts);
 }
-const qvSegHtml = (order, on) => order.map(({ k, live }) => `<button data-k="${k}" class="${k === on ? 'on' : ''}"><img src="${esc(teamLogo(TEAMS[k]))}" alt="">${esc(QV_SHORT[k])}${live ? '<span class="lvdot" title="Live now"></span>' : k === 'phillies' ? ' <span class="dim small">offseason</span>' : ''}</button>`).join('');
+const qvSegHtml = (order, on) => order.map(({ k, live }) => `<button data-k="${k}" class="${k === on ? 'on' : ''}"><img src="${esc(teamLogo(TEAMS[k]))}" alt="">${esc(QV_SHORT[k])}${live ? '<span class="lvpill">Live</span>' : k === 'phillies' ? ' <span class="dim small">offseason</span>' : ''}</button>`).join('');
 
 async function openQuickView(startKey) {
   openModal(`<div class="qv-head"><div class="small" style="opacity:.8;letter-spacing:.12em;text-transform:uppercase">${esc(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))}</div><h2>⚡ Game day</h2></div>
