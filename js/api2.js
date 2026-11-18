@@ -56,10 +56,12 @@ Object.assign(API, {
       const pageUrl = p => `${ESPN.common(t)}/statistics/byathlete?region=us&lang=en&contentorigin=espn&isqualified=false&limit=500&page=${p}&season=${season}&seasontype=2&sort=offensive.avgPoints%3Adesc`;
       const pages = ids.size ? await Promise.all([1, 2].map(p => safe(getJSON(pageUrl(p), ttl), null))) : [];
       const j = { athletes: pages.flatMap(p => p?.athletes || []).filter(a => ids.has(String(a.athlete.id))) };
-      const spec = [['GP', 'general', 0], ['MIN', 'general', 1], ['PTS', 'offensive', 0], ['REB', 'general', 11], ['AST', 'offensive', 10], ['STL', 'defensive', 0], ['BLK', 'defensive', 1], ['FG%', 'offensive', 3], ['3P%', 'offensive', 6], ['FT%', 'offensive', 9]];
+      // ESPN field order: general = GP, MIN, …, REB(11); offensive = PTS, FGM, FGA, FG%, 3PM, 3PA, 3P%, FTM, FTA, FT%, AST, TO; defensive = STL, BLK
+      const spec = [['GP', 'general', 0], ['MIN', 'general', 1], ['PTS', 'offensive', 0], ['REB', 'general', 11], ['AST', 'offensive', 10], ['STL', 'defensive', 0], ['BLK', 'defensive', 1], ['FG', 'offensive', [1, 2]], ['FG%', 'offensive', 3], ['3PT', 'offensive', [4, 5]], ['3P%', 'offensive', 6], ['FT', 'offensive', [7, 8]], ['FT%', 'offensive', 9], ['TO', 'offensive', 11]];
       const rows = (j?.athletes || []).map(a => {
         const cat = n => a.categories?.find(c => c.name === n)?.totals || [];
-        return { id: a.athlete.id, name: a.athlete.displayName, pos: a.athlete.position?.abbreviation || '', v: Object.fromEntries(spec.map(([k, c, i]) => [k, cat(c)[i] ?? ''])) };
+        const val = (c, i) => (Array.isArray(i) ? (cat(c)[i[0]] != null ? `${cat(c)[i[0]]}-${cat(c)[i[1]]}` : '') : cat(c)[i] ?? '');
+        return { id: a.athlete.id, name: a.athlete.displayName, pos: a.athlete.position?.abbreviation || '', v: Object.fromEntries(spec.map(([k, c, i]) => [k, val(c, i)])) };
       }).filter(r => r.v.GP && r.v.GP !== '-');
       return { ids, tables: rows.length ? [{ key: 'pergame', name: 'Per game', cols: spec.map(s => s[0]), rows, sortKey: 'PTS' }] : [] };
     }
@@ -71,10 +73,14 @@ Object.assign(API, {
     const refs = uniq(cats.flatMap(x => x.c.leaders.map(l => l.athlete?.$ref)).filter(Boolean));
     const names = {};
     await pool(refs, 10, async ref => { const a = await safe(getJSON(httpsify(ref), 86400), null); names[ref] = { name: a?.displayName || a?.fullName || '', pos: a?.position?.abbreviation || '', id: a?.id }; });
-    return { ids: new Set(Object.values(names).map(n => String(n.id))), tables: cats.map(({ label, c }) => ({
-      key: label.toLowerCase(), name: label, cols: ['Stat line'], sortKey: null,
-      rows: c.leaders.slice(0, 12).map(l => { const m = names[l.athlete?.$ref] || {}; return { id: m.id, name: m.name, pos: m.pos, v: { 'Stat line': l.displayValue } }; }).filter(r => r.name),
-    })).filter(x => x.rows.length) };
+    // Turn ESPN's one-line summaries ("89/154, 933 YDS, 8 TD, 3 INT") into columns so the table sorts like the others.
+    const SINGLE = { Tackles: "TKL", Sacks: "SACK", Interceptions: "INT", Receptions: "REC" };
+    const parseLine = (s, cat) => { const out = {}; String(s || '').split(',').map(x => x.trim()).filter(Boolean).forEach(tok => { const m = tok.match(/^(-?[\d.,/]+)\s*(.*)$/); if (!m) return; const lab = m[2] || (m[1].includes('/') ? 'C/ATT' : SINGLE[cat] || cat.toUpperCase()); out[lab] = m[1]; }); return out; };
+    return { ids: new Set(Object.values(names).map(n => String(n.id))), tables: cats.map(({ label, c }) => {
+      const rows = c.leaders.slice(0, 12).map(l => { const m = names[l.athlete?.$ref] || {}; return { id: m.id, name: m.name, pos: m.pos, v: parseLine(l.displayValue, label) }; }).filter(r => r.name);
+      const cols = uniq(rows.flatMap(r => Object.keys(r.v)));
+      return { key: label.toLowerCase(), name: label, cols, sortKey: cols.find(x => /YDS/.test(x)) || cols.find(x => x !== 'C/ATT') || cols[0], rows };
+    }).filter(x => x.rows.length) };
   },
 
   /** MLB only: the full roster for a past season (ESPN's historical NFL/NBA rosters return today's players, so they aren't used). */
