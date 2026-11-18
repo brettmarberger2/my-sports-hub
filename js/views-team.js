@@ -45,8 +45,8 @@ async function viewTeam({ parts, q, mount, alive }) {
 function headNowHtml(t, gs) {
   const g = gs.live, n = gs.next, l = gs.last;
   const lastTxt = l ? `<a class="hn-last" href="javascript:void(0)" data-game="${gameRef(t, l)}">Last: <b class="${l.result === "W" ? "w" : "l"}">${esc(l.result)} ${l.ourScore}–${l.oppScore}</b> ${l.home ? "vs" : "@"} ${esc(l.opp.abbr || l.opp.short)}</a>` : "";
-  if (g) return `<a class="headnow live" href="javascript:void(0)" data-game="${gameRef(t, g)}"><span class="nl-tag">● Live now</span><b class="hn-score">${g.ourScore ?? 0}–${g.oppScore ?? 0}</b><span class="hn-opp">${g.home ? "vs" : "at"} ${esc(g.opp.short || g.opp.name)}</span><span class="hn-when">${esc(g.detail)}</span><span class="hn-go">Live game ›</span></a>`;
-  if (n) return `<a class="headnow" href="javascript:void(0)" data-game="${gameRef(t, n)}"><span class="nl-tag">Next up</span><span class="hn-opp">${n.home ? "vs" : "at"} <b>${esc(n.opp.short || n.opp.name)}</b></span><span class="hn-when">${esc(whenTxt(n.date, n.tbd))}${n.tv ? " · " + esc(n.tv) : ""}</span><span data-odds="${gameRef(t, n)}"></span><span class="hn-go">Preview ›</span></a>${lastTxt}`;
+  if (g) return `<div class="headnow live" data-game="${gameRef(t, g)}"><span class="nl-tag">● Live now</span><b class="hn-score">${g.ourScore ?? 0}–${g.oppScore ?? 0}</b><span class="hn-opp">${g.home ? "vs" : "at"} ${esc(g.opp.short || g.opp.name)}</span><span class="hn-when">${esc(g.detail)}</span>${watchLink(g.tv)}<span class="hn-go">Live game ›</span></div>`;
+  if (n) return `<div class="headnow" data-game="${gameRef(t, n)}"><span class="nl-tag">Next up</span><span class="hn-opp">${n.home ? "vs" : "at"} <b>${esc(n.opp.short || n.opp.name)}</b></span><span class="hn-when">${esc(whenTxt(n.date, n.tbd))}</span>${watchLink(n.tv)}<span data-odds="${gameRef(t, n)}"></span><span class="hn-go">Preview ›</span></div>${lastTxt}`;
   return lastTxt ? `<div class="headnow idle">${lastTxt}</div>` : "";
 }
 

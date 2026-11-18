@@ -6,7 +6,7 @@ const PHILLY_ID = { nfl: '21', nba: '20', mlb: '143', 'college-football': '84', 
 const gameRef = (t, g) => `${t.mlbId ? 'mlb' : 'espn'}|${t.league}|${g.id}|${t.key}`;
 
 document.addEventListener('click', e => {
-  const g = e.target.closest('[data-game]'); if (!g || e.target.closest('[data-player]')) return;
+  const g = e.target.closest('[data-game]'); if (!g || e.target.closest('[data-player]') || e.target.closest('a[target="_blank"]')) return;
   e.preventDefault(); const [kind, lg, id] = g.dataset.game.split('|'); openGame(kind, lg, id);
 });
 
@@ -165,7 +165,8 @@ async function openGame(kind, lg, id, opts = {}) {
   const tab = opts.tab || ph.id;
   updateModal(`<div id="gameMark" data-g="${esc(id)}" hidden></div><div class="pl-head bx-head" style="--team:${T.primary}"><div class="bx-top"><div class="small" style="opacity:.85;letter-spacing:.1em;text-transform:uppercase">${esc(g.note || LEAGUES[lg].short)} · ${esc(fmtDate(g.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }))}</div>${status}</div>
       <div class="bx-teams">${side(away)}<div class="bx-at">${pre ? '@' : '–'}</div>${side(home)}</div>
-      <div class="small" style="opacity:.85">${esc([g.venue, g.tv].filter(Boolean).join(' · '))}${g.decisions?.length ? ` · ${esc(g.decisions.join(' · '))}` : ''}</div></div>
+      <div class="small" style="opacity:.85">${esc([g.venue].filter(Boolean).join(' · '))}${g.decisions?.length ? ` · ${esc(g.decisions.join(' · '))}` : ''}</div>
+      ${g.tv || g.link ? `<div class="bx-watch">${watchLink(g.tv, g.state === 'in' ? 'Live on' : 'On')}${g.link ? `<a class="tvlink" href="${esc(g.link)}" target="_blank" rel="noopener">ESPN Gamecast ↗</a>` : ''}</div>` : ''}</div>
     <div class="pl-body">
       ${pre ? `<div id="pvBox">${spinner('Building the game preview…')}</div>` : `
         ${live ? `${nowHtml(g)}<p class="small dim" style="margin:6px 0 0">Updates automatically every 30 seconds.</p>` : ''}

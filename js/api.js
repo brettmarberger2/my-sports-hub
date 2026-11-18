@@ -30,7 +30,7 @@ const API = {
       opp: { id: tn.id, name: tn.displayName || tn.name, short: tn.shortDisplayName || tn.name, abbr: tn.abbreviation, logo: tn.logos?.[0]?.href || (tn.abbreviation ? teamLogo(t, tn.abbreviation) : '') },
       ourScore: a, oppScore: b, result, state, detail: st.shortDetail || st.detail || '', completed: !!st.completed,
       label: ev.week?.text || (ev.seasonType?.type === 3 ? ev.competitions[0].notes?.[0]?.headline || 'Postseason' : ev.seasonType?.name) || '',
-      stype: ev.seasonType?.type ?? 2, venue: c.venue?.fullName, tv: c.broadcasts?.[0]?.media?.shortName || c.broadcast || '',
+      stype: ev.seasonType?.type ?? 2, venue: c.venue?.fullName, tv: c.broadcasts?.[0]?.media?.shortName || (typeof c.broadcast === 'string' ? c.broadcast : '') || c.broadcasts?.[0]?.names?.[0] || c.geoBroadcasts?.[0]?.media?.shortName || '',
       link: ev.links?.find(l => /gamecast|summary|boxscore/i.test(l.text || ''))?.href || `https://www.espn.com/${t.league}/game/_/gameId/${ev.id}`,
       ourRecord: us.record?.find?.(r => r.type === 'total')?.displayValue || (typeof us.record === 'string' ? us.record : ''),
       period: c.status?.period, clock: c.status?.displayClock,

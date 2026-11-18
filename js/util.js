@@ -109,3 +109,20 @@ document.addEventListener('click', e => {
   const wrap = document.getElementById(id)?.closest('.table-wrap');
   if (wrap) { const scroll = wrap.scrollLeft; wrap.outerHTML = renderTable(id, st.cols, st.rows, st.opts); const nw = document.getElementById(id)?.closest('.table-wrap'); if (nw) nw.scrollLeft = scroll; }
 });
+
+/* ---------- Where to watch: network name → where it streams ---------- */
+const WATCH = [
+  [/^(ESPN+?|ESPN2|ESPNU|ESPNEWS|SEC ?Network|SECN|ACC ?Network|ACCN|ABC|Disney+?|Hulu)$/i, 'https://www.espn.com/watch'],
+  [/peacock|^NBC$|NBC Sports|NBCSN/i, 'https://www.peacocktv.com/sports'],
+  [/^(FOX|FS1|FS2|FOX Sports|FOX Deportes)$/i, 'https://www.foxsports.com/live'],
+  [/^(BTN|Big Ten Network|B1G+?)$/i, 'https://www.bigtenplus.com'],
+  [/^(CBS|CBSSN|CBS Sports Network|Paramount+?)$/i, 'https://www.paramountplus.com/live-tv/'],
+  [/^(TNT|TBS|truTV|TNT Sports|Max)$/i, 'https://www.max.com'],
+  [/prime|amazon/i, 'https://www.primevideo.com'], [/netflix/i, 'https://www.netflix.com'], [/apple/i, 'https://tv.apple.com'],
+  [/NBA ?TV|League Pass/i, 'https://www.nba.com/watch'], [/NFL ?Network|NFL+/i, 'https://www.nfl.com/plus/'], [/MLB ?Network|MLB.TV/i, 'https://www.mlb.com/tv'],
+  [/DAZN/i, 'https://www.dazn.com'], [/^YES/i, 'https://www.yesnetwork.com'], [/NBCSP|NBC Sports Philadelphia/i, 'https://www.nbcsportsphiladelphia.com/watch'],
+  [/Fubo/i, 'https://www.fubo.tv'], [/Sling/i, 'https://www.sling.com'], [/YouTube/i, 'https://tv.youtube.com'],
+];
+const watchUrl = tv => (WATCH.find(([re]) => re.test(tv)) || [])[1] || `https://www.google.com/search?q=${encodeURIComponent('watch ' + tv + ' live stream')}`;
+/** "📺 Peacock ↗" linking to where the network streams. Empty when the game has no listed broadcaster. */
+const watchLink = (tv, label = '') => (tv ? `<a class="tvlink" href="${esc(watchUrl(tv))}" target="_blank" rel="noopener" title="Where to watch">📺 ${label ? esc(label) + ' ' : ''}${esc(tv)} ↗</a>` : '');

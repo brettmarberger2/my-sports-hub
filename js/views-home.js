@@ -42,7 +42,7 @@ async function viewHome({ mount, alive }) {
       <div>
         <div class="tri"><span></span><span></span><span></span></div>
         <h1>My sports,<br><em>right now.</em></h1>
-        <a class="nowline" id="nowLine" href="javascript:void(0)" hidden></a>
+        <div class="nowline" id="nowLine" hidden></div>
         <p class="lede">Game days, odds, lineups, standings and news for the Eagles and 76ers, plus Indiana football and basketball. The Phillies are in the offseason. Every season since ${yr.min} is in the history section.</p>
         <div class="herobtns">
           <a class="btn primary" style="--team:#0b1a30" href="javascript:void(0)" data-qv>⚡ Game day</a>
@@ -233,8 +233,8 @@ function homeNowLine(stats) {
   const g = live[0] ? s.gs.live : s.gs.next, t = s.t;
   el.hidden = false; el.classList.toggle('live', !!live[0]); el.dataset.game = gameRef(t, g);
   el.innerHTML = live[0]
-    ? `<span class="nl-tag">● Live now</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.ourScore ?? 0}–${g.oppScore ?? 0} ${g.home ? 'vs' : 'at'} ${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(g.detail)}${live.length > 1 ? ` · +${live.length - 1} more live` : ''}</span><span class="nl-go">Watch ›</span>`
-    : `<span class="nl-tag">Next up</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.home ? 'vs' : 'at'} ${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(whenTxt(g.date, g.tbd))}${g.tv ? ' · ' + esc(g.tv) : ''}</span><span class="nl-go">Preview ›</span>`;
+    ? `<span class="nl-tag">● Live now</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.ourScore ?? 0}–${g.oppScore ?? 0} ${g.home ? 'vs' : 'at'} ${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(g.detail)}${live.length > 1 ? ` · +${live.length - 1} more live` : ''}</span>${watchLink(g.tv)}<span class="nl-go">Live game ›</span>`
+    : `<span class="nl-tag">Next up</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.home ? 'vs' : 'at'} ${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(whenTxt(g.date, g.tbd))}</span>${watchLink(g.tv)}<span class="nl-go">Preview ›</span>`;
 }
 
 /** Big banner for the very next Philly game (or every game that's live right now). */

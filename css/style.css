@@ -963,3 +963,5 @@ table.linescore th, table.linescore td { padding: 8px 10px; } table.linescore .t
 .hn-last { color: #ffffffd0; font-size: .86rem; font-weight: 600; } .hn-last b.w { color: #b9f5d6; } .hn-last b.l { color: #ffd0cb; } .hn-last:hover { color: #fff; text-decoration: none; }
 .headnow.idle { background: transparent; border: 0; padding: 0; }
 @media (max-width: 760px) { .headnow { font-size: .88rem; padding: 9px 12px; gap: 8px; width: 100%; } .headnow .hn-score { font-size: 1.45rem; } .headnow .hn-go { margin-left: auto; } }
+.bx-head .tvlink { background: #fff; color: var(--ink); border-color: transparent; opacity: 1; font-weight: 800; }
+.bx-head .tvlink:hover { background: #f1f1f1; }
