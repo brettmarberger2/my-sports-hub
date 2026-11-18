@@ -273,11 +273,12 @@ async function tabStats(t, { mount, alive }) {
   const [s, roster, nbaTbl] = await Promise.all([safe(API.teamStats(t)), safe(API.roster(t)), t.league === 'nba' ? safe(API.nbaTable()) : Promise.resolve(null)]); if (!alive()) return;
   const rmap = new Map((roster?.players || []).map(p => [normName(p.name), p.id]));
   const nbaStart = nbaTbl ? (nbaTbl.fallback ? nbaTbl.year : nbaTbl.year) : null;
-  const seasons = isMlb ? [] : t.league === 'nba' ? [[nbaStart, `${nbaStart}–${String(nbaStart + 1).slice(2)}${nbaTbl?.fallback ? ' (last season)' : ''}`], [nbaStart - 1, `${nbaStart - 1}–${String(nbaStart).slice(2)}`]] : [[null, `${nowYear()} season`], [nowYear() - 1, `${nowYear() - 1}`]];
+  const cbb = t.college && t.sport === 'basketball', cs = seasonStartYear(t);
+  const seasons = isMlb ? [] : cbb ? [[null, `${cs}–${String(cs + 1).slice(2)}`], [cs - 1, `${cs - 1}–${String(cs).slice(2)}`]] : t.league === 'nba' ? [[nbaStart, `${nbaStart}–${String(nbaStart + 1).slice(2)}${nbaTbl?.fallback ? ' (last season)' : ''}`], [nbaStart - 1, `${nbaStart - 1}–${String(nbaStart).slice(2)}`]] : [[null, `${nowYear()} season`], [nowYear() - 1, `${nowYear() - 1}`]];
   mount.innerHTML = `
     <div class="section" style="margin-top:0"><h2>${isMlb ? 'Player performance' : 'Player stats'}</h2><p class="section-sub">${isMlb ? 'Every hitter and pitcher graded against the league, with who is hot and who is struggling.' : 'Click any player for career stats, contract and bio.'}</p>
       ${isMlb ? '<div id="pstats"></div>' : `<div class="filters" style="padding:10px 14px"><div class="seg" id="ysSeg">${seasons.map(([y, l], i) => `<button data-i="${i}" class="${i === 0 ? 'on' : ''}">${l}</button>`).join('')}</div>${nbaTbl?.fallback ? `<span class="muted small">The new NBA season hasn't started, so this is last season.</span>` : ''}${t.league !== 'mlb' ? `<span class="muted small">Shows the team's season leaders and the players who played for the team that year; players with very few games can be missing.</span>` : ''}</div><div class="card" id="pstats"></div>`}</div>
-    ${isMlb ? '' : `<div class="section"><h2>${t.nick} in the league's top 10</h2><div id="rankBox">${spinner()}</div></div><div class="section"><h2>Stars of the season</h2><div id="starsBox">${spinner()}</div></div>`}
+    ${isMlb ? '' : `${t.college ? '' : `<div class="section"><h2>${t.nick} in the league's top 10</h2><div id="rankBox">${spinner()}</div></div>`}<div class="section"><h2>Stars of the season</h2><div id="starsBox">${spinner()}</div></div>`}
     <div class="section"><h2>Team statistics</h2>
     ${s?.cats?.length ? `<div class="filters"><div class="chips" id="sideChips"><button class="chip on" data-s="team">${esc(t.nick)}</button><button class="chip" data-s="opp">Opponents</button></div><span class="muted small">${esc(s.season?.displayName || '')} ${esc(s.season?.name || '')}</span></div><div id="statBody"></div>` : errBox('Team statistics are not available yet for this season.')}</div>`;
   if (isMlb) mlbProStatsView(t, $('#pstats'), alive, rmap);
@@ -285,6 +286,7 @@ async function tabStats(t, { mount, alive }) {
     const refresh = async year => {
       playerStatsPanel(t, year, $('#pstats'));
       starsHtml(t, year).then(h => alive() && ($('#starsBox').innerHTML = h));
+      if (!$('#rankBox')) return;
       $('#rankBox').innerHTML = spinner();
       const groups = await safe(API.leagueLeaders(t.league, year), []); if (!alive()) return;
       const mine = (groups || []).flatMap(g => g.lists.map(l => l.rows.filter(r => r.philly).map(r => ({ ...r, cat: l.label, main: l.main, lbKey: l.key, start: l.start })))).flat();

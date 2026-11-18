@@ -184,7 +184,7 @@ const API = {
       }
       return out;
     }
-    const season = espnSeason(t, year ?? new Date().getFullYear());
+    const season = espnSeason(t, year ?? seasonStartYear(t));
     const want = t.sport === 'football'
       ? { passingYards: 'Passing Yards', rushingYards: 'Rushing Yards', receivingYards: 'Receiving Yards', passingTouchdowns: 'Passing TD', receivingTouchdowns: 'Receiving TD', totalTackles: 'Tackles', sacks: 'Sacks', interceptions: 'Interceptions' }
       : { pointsPerGame: 'Points / Game', reboundsPerGame: 'Rebounds / Game', assistsPerGame: 'Assists / Game', stealsPerGame: 'Steals / Game', blocksPerGame: 'Blocks / Game', threePointFieldGoalsMade: '3-Pointers Made' };

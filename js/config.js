@@ -66,7 +66,9 @@ const teamLogoOn = (t, abbr) => (t.college ? (abbr ? '' : `https://a.espncdn.com
 const headshot = (t, id) => `https://a.espncdn.com/i/headshots/${t.league}/players/full/${id}.png`;
 
 /** ESPN "season" query value for our start-year keyed seasons (NBA seasons are labelled by ending year). */
-const espnSeason = (t, year) => (t.league === 'nba' ? year + 1 : year);
+const espnSeason = (t, year) => (t.league === 'nba' || t.league === 'mens-college-basketball' ? year + 1 : year);
+/** The start year of the season in progress (basketball seasons span two calendar years and ESPN names them by the end year). */
+const seasonStartYear = t => { const d = new Date(); return (t.league === 'nba' || t.league === 'mens-college-basketball') && d.getMonth() < 7 ? d.getFullYear() - 1 : d.getFullYear(); };
 const seasonLabel = (t, year) => (t.league === 'nba' || t.league === 'mens-college-basketball' ? `${year}–${String(year + 1).slice(2)}` : String(year));
 
 const CHAMP_TITLES = { nfl: ['NFL Championship / Super Bowl', 'NFL'], mlb: ['World Series', 'MLB'], nba: ['NBA Championship', 'NBA'] };

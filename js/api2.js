@@ -32,6 +32,21 @@ Object.assign(API, {
         { key: 'pitching', name: 'Pitching', cols: ps.map(([k]) => k), rows: rows(p, ps), sortKey: 'IP' },
       ].filter(x => x.rows.length) };
     }
+    if (t.college && t.sport === 'basketball') {
+      // College hoops: ESPN has no team filter on player stats, so read each roster player's season-averages line.
+      const start = year ?? seasonStartYear(t), season = espnSeason(t, start);
+      const roster = await safe(API.roster(t), null), players = roster?.players || [];
+      const want = ['GP', 'MIN', 'PTS', 'REB', 'AST', 'STL', 'BLK', 'FG', 'FG%', '3PT', '3P%', 'FT', 'FT%', 'TO'];
+      const rows = [];
+      await pool(players.filter(p => p.id), 8, async p => {
+        const j = await safe(getJSON(`${ESPN.common(t)}/athletes/${p.id}/stats`, ttl), null);
+        const cat = j?.categories?.find(c => c.name === 'averages'), labels = cat?.labels || [];
+        const row = cat?.statistics?.find(r => r.season?.year === season && String(r.teamId) === String(t.espnId));
+        if (!row) return;
+        rows.push({ id: p.id, name: p.name, pos: p.pos || row.position || '', v: Object.fromEntries(want.map(k => [k, row.stats[labels.indexOf(k)] ?? ''])) });
+      });
+      return { ids: new Set(players.map(p => String(p.id))), tables: rows.length ? [{ key: 'pergame', name: 'Per game', cols: want, rows, sortKey: 'PTS' }] : [] };
+    }
     if (t.league === 'nba') {
       // ESPN ignores a team filter on player stats and tags players with their CURRENT team, so identify who actually
       // played for this team that season from the team's own season leaders, then pull those players' full lines.
