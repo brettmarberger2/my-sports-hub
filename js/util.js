@@ -130,3 +130,17 @@ const watchLink = (tv, label = '') => (tv ? `<a class="tvlink" href="${esc(watch
 /** YouTube search for a finished game's highlight reel, e.g. "Arkansas Razorbacks vs Indiana Hoosiers highlights Nov 17 2026". */
 const ytHighlightsUrl = (awayName, homeName, date) => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${awayName} vs ${homeName} highlights ${fmtDate(date, { month: 'short', day: 'numeric', year: 'numeric' })}`);
 const ytLink = (awayName, homeName, date, label = 'YouTube highlights') => `<a class="tvlink ythl" href="${esc(ytHighlightsUrl(awayName, homeName, date))}" target="_blank" rel="noopener">▶ ${esc(label)} ↗</a>`;
+
+/** "#20" tag for a ranked college team; empty otherwise. */
+const rkTag = n => (n ? `<span class="rk">#${n}</span>` : '');
+/** Every game played this season, newest first: date, opponent (with rank), result, box score, highlights. */
+function resultsListHtml(t, played, { limit = 12 } = {}) {
+  if (!played.length) return '';
+  const rows = [...played].reverse().slice(0, limit).map(g => `<div class="resrow" data-game="${gameRef(t, g)}">
+      <span class="rd">${esc(fmtDate(g.date, { month: 'short', day: 'numeric' }))}</span>
+      <span class="ro"><img src="${esc(g.opp.logo)}" alt="" onerror="this.style.visibility='hidden'"><span>${g.home ? 'vs' : '@'} ${rkTag(g.oppRank)}${esc(g.opp.short || g.opp.name)}</span></span>
+      <b class="rr ${g.result === 'W' ? 'w' : g.result === 'L' ? 'l' : ''}">${esc(g.result || '')} ${g.ourScore}–${g.oppScore}</b>
+      <span class="rl"><span class="dim small">Box score ›</span>${ytLink(g.home ? g.opp.name : t.name, g.home ? t.name : g.opp.name, g.date, 'Highlights')}</span>
+    </div>`).join('');
+  return `<h4 style="margin-top:16px">Results <span class="dim">${played.filter(g => g.result === 'W').length}-${played.filter(g => g.result === 'L').length}</span></h4><div class="reslist">${rows}</div>${played.length > limit ? `<a class="small" href="#/team/${t.key}/schedule">All ${played.length} results ›</a>` : ''}`;
+}

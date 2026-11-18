@@ -16,7 +16,7 @@ API.gameSummary = async (kind, lg, id) => (kind === 'mlb' ? mlbSummary(id) : esp
 async function espnSummary(lg, id) {
   const s = await getJSON(`https://site.api.espn.com/apis/site/v2/sports/${SPORT_OF[lg]}/${lg}/summary?event=${id}`, 30);
   const comp = s.header?.competitions?.[0] || {}, st = comp.status?.type || {};
-  const teams = (comp.competitors || []).map(c => ({ side: c.homeAway, id: String(c.team.id), abbr: c.team.abbreviation, name: c.team.displayName, logo: c.team.logos?.[0]?.href || c.team.logo, score: c.score ?? '', winner: !!c.winner, record: c.record?.[0]?.displayValue || c.record?.[0]?.summary || '', lines: (c.linescores || []).map(l => l.displayValue ?? l.value) }))
+  const teams = (comp.competitors || []).map(c => ({ side: c.homeAway, id: String(c.team.id), abbr: c.team.abbreviation, name: c.team.displayName, logo: c.team.logos?.[0]?.href || c.team.logo, score: c.score ?? '', winner: !!c.winner, rank: c.rank && c.rank <= 25 ? c.rank : null, record: c.record?.[0]?.displayValue || c.record?.[0]?.summary || '', lines: (c.linescores || []).map(l => l.displayValue ?? l.value) }))
     .sort((a, b) => (a.side === 'away' ? -1 : 1));
   const tsById = new Map((s.boxscore?.teams || []).map(t => [String(t.team.id), t.statistics || []]));
   const labels = (s.boxscore?.teams?.[0]?.statistics || []).map(x => x.label || x.name);
@@ -158,7 +158,7 @@ async function openGame(kind, lg, id, opts = {}) {
   const rmap = lg === 'mlb' ? new Map(((await safe(getRosterCached('phillies'), null))?.players || []).map(p => [normName(p.name), p.id])) : null;
   const [away, home] = g.teams, ph = g.teams.find(t => t.id === PHILLY_ID[lg]) || home, other = g.teams.find(t => t !== ph);
   const pre = g.state === 'pre', live = g.state === 'in';
-  const side = t => `<div class="bxt ${t.winner ? 'w' : ''}" data-teamcard="${lg}|${t.id}" role="button" title="Open ${esc(t.name)}"><img src="${esc(t.logo)}" alt=""><div><b>${esc(t.abbr)}</b><span>${esc(t.record)}</span></div>${pre ? '' : `<div class="bxs">${esc(t.score)}</div>`}</div>`;
+  const side = t => `<div class="bxt ${t.winner ? 'w' : ''}" data-teamcard="${lg}|${t.id}" role="button" title="Open ${esc(t.name)}"><img src="${esc(t.logo)}" alt=""><div><b>${/college/.test(lg) ? (t.rank ? `<span class="rk">#${t.rank}</span>` : '<span class="rk nr">NR</span>') : ''}${esc(t.abbr)}</b><span>${esc(t.record)}</span></div>${pre ? '' : `<div class="bxs">${esc(t.score)}</div>`}</div>`;
   const status = live ? `<span class="badge live">Live · ${esc(g.detail)}</span>` : pre ? `<span class="badge">${esc(fmtDay(g.date))} · ${esc(fmtTime(g.date))}</span>` : `<span class="badge">${esc(g.detail || 'Final')}</span>`;
   const tstats = g.teamStats.length ? `<div class="table-wrap"><table class="data"><thead><tr><th class="stk">Team stats</th>${g.teams.map(t => `<th class="num">${esc(t.abbr)}</th>`).join('')}</tr></thead><tbody>${g.teamStats.map(s => `<tr><td class="stk muted">${esc(s.label)}</td>${s.vals.map(v => `<td class="num"><b>${esc(v)}</b></td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '';
   const T = TEAMS[LEAGUES[lg].team];

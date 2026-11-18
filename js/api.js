@@ -16,6 +16,8 @@ const API = {
   /* ---------- Games ---------- */
   normEvent(t, ev) {
     const c = ev.competitions?.[0]; if (!c) return null;
+    // College feeds carry the AP rank at game time (99 = unranked)
+    const rankOf = x => { const r = x.curatedRank?.current ?? x.rank; return r && r <= 25 ? r : null; };
     const us = c.competitors.find(x => String(x.team?.id) === String(t.espnId)), them = c.competitors.find(x => x !== us);
     if (!us || !them) return null;
     const sc = x => { const s = x.score; if (s == null) return null; const v = typeof s === 'object' ? (s.displayValue ?? s.value) : s; return v === '' || v == null ? null : Number(v); };
@@ -29,6 +31,7 @@ const API = {
       id: ev.id, ts: new Date(ev.date).getTime(), date: c.timeValid === false ? new Date(new Date(ev.date).getTime() - 5 * 3600e3).toISOString().slice(0, 10) + 'T17:00:00Z' : ev.date, tbd: c.timeValid === false, home: us.homeAway === 'home', neutral: !!c.neutralSite,
       opp: { id: tn.id, name: tn.displayName || tn.name, short: tn.shortDisplayName || tn.name, abbr: tn.abbreviation, logo: tn.logos?.[0]?.href || (tn.abbreviation ? teamLogo(t, tn.abbreviation) : '') },
       ourScore: a, oppScore: b, result, state, detail: st.shortDetail || st.detail || '', completed: !!st.completed,
+      ourRank: rankOf(us), oppRank: rankOf(them),
       label: ev.week?.text || (ev.seasonType?.type === 3 ? ev.competitions[0].notes?.[0]?.headline || 'Postseason' : ev.seasonType?.name) || '',
       stype: ev.seasonType?.type ?? 2, venue: c.venue?.fullName, tv: c.broadcasts?.[0]?.media?.shortName || (typeof c.broadcast === 'string' ? c.broadcast : '') || c.broadcasts?.[0]?.names?.[0] || c.geoBroadcasts?.[0]?.media?.shortName || '',
       link: ev.links?.find(l => /gamecast|summary|boxscore/i.test(l.text || ''))?.href || `https://www.espn.com/${t.league}/game/_/gameId/${ev.id}`,

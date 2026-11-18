@@ -10,10 +10,10 @@ function resultChip(g) {
 function gameBox(t, g, label) {
   if (!g) return `<div class="gamebox"><div class="lab"><span>${label}</span></div><div class="muted small">Nothing on the schedule right now.</div></div>`;
   const live = g.state === 'in', done = g.state === 'post';
-  const meSide = { logo: teamLogo(t), abbr: t.abbr, score: g.ourScore };
-  const opSide = { logo: g.opp.logo, abbr: g.opp.abbr || g.opp.short, score: g.oppScore };
+  const meSide = { logo: teamLogo(t), abbr: t.abbr, score: g.ourScore, rank: g.ourRank };
+  const opSide = { logo: g.opp.logo, abbr: g.opp.abbr || g.opp.short, score: g.oppScore, rank: g.oppRank };
   const [away, home] = g.home ? [opSide, meSide] : [meSide, opSide];
-  const side = (s, isRight) => `<div class="side" style="${isRight ? 'flex-direction:row-reverse' : ''}"><img src="${esc(s.logo)}" alt="" onerror="this.style.visibility='hidden'"><span>${esc(s.abbr)}</span></div>`;
+  const side = (s, isRight) => `<div class="side" style="${isRight ? 'flex-direction:row-reverse' : ''}"><img src="${esc(s.logo)}" alt="" onerror="this.style.visibility='hidden'"><span>${rkTag(s.rank)}${esc(s.abbr)}</span></div>`;
   const mid = (live || done) ? `<div class="score">${away.score ?? 0} – ${home.score ?? 0}</div>` : `<div class="muted small center">${g.home ? 'vs' : '@'}</div>`;
   const badge = live ? `<span class="badge live">Live · ${esc(g.detail)}</span>` : done ? `<span class="badge ${g.result === 'W' ? 'good' : g.result === 'L' ? 'bad' : ''}">Final · ${g.result}</span>` : `<span class="badge">${esc(fmtDay(g.date))} · ${g.tbd ? 'Time TBD' : esc(fmtTime(g.date))}</span>`;
   const meta = [g.label, g.tv, g.venue].filter(Boolean).join(' · ');
@@ -234,7 +234,7 @@ function homeNowLine(stats) {
   el.hidden = false; el.classList.toggle('live', !!live[0]); el.dataset.game = gameRef(t, g);
   el.innerHTML = live[0]
     ? `<span class="nl-tag">● Live now</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.ourScore ?? 0}–${g.oppScore ?? 0} ${g.home ? 'vs' : 'at'} ${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(g.detail)}${live.length > 1 ? ` · +${live.length - 1} more live` : ''}</span>${watchLink(g.tv)}<span class="nl-go">Live game ›</span>`
-    : `<span class="nl-tag">Next up</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.home ? 'vs' : 'at'} ${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(whenTxt(g.date, g.tbd))}</span>${watchLink(g.tv)}<span class="nl-go">Preview ›</span>`;
+    : `<span class="nl-tag">Next up</span><img src="${teamLogo(t)}" alt=""><b>${esc(t.nick)} ${g.home ? 'vs' : 'at'} ${rkTag(g.oppRank)}${esc(g.opp.short || g.opp.name)}</b><span class="nl-when">${esc(whenTxt(g.date, g.tbd))}</span>${watchLink(g.tv)}<span class="nl-go">Preview ›</span>`;
 }
 
 /** Big banner for the very next Philly game (or every game that's live right now). */
@@ -244,7 +244,7 @@ function homeUpNext(stats) {
   const next = stats.filter(s => s.gs?.next).map(s => ({ ...s, g: s.gs.next })).sort((a, b) => a.g.ts - b.g.ts)[0];
   const card = ({ t, g }, isLive) => `<a class="upnext ${isLive ? 'live' : ''}" href="javascript:void(0)" data-game="${gameRef(t, g)}" style="--c1:${t.primary}">
       <div class="un-lab">${isLive ? '<span class="badge live">Live now</span>' : '<span class="un-tag">Up next</span>'}<span>${esc(t.nick)} · ${esc(g.label || t.sportName)}</span></div>
-      <div class="un-main"><img src="${teamLogo(t)}" alt=""><div class="un-mid">${isLive ? `<b class="un-score">${g.ourScore ?? 0} – ${g.oppScore ?? 0}</b><span>${esc(g.detail)}</span>` : `<b>${g.home ? 'vs' : 'at'} ${esc(g.opp.name)}</b><span>${esc(whenTxt(g.date, g.tbd))}${g.tv ? ' · ' + esc(g.tv) : ''}</span>`}</div><img src="${esc(g.opp.logo)}" alt="" onerror="this.style.visibility='hidden'"></div>
+      <div class="un-main"><img src="${teamLogo(t)}" alt=""><div class="un-mid">${isLive ? `<b class="un-score">${g.ourScore ?? 0} – ${g.oppScore ?? 0}</b><span>${esc(g.detail)}</span>` : `<b>${g.home ? 'vs' : 'at'} ${rkTag(g.oppRank)}${esc(g.opp.name)}</b><span>${esc(whenTxt(g.date, g.tbd))}${g.tv ? ' · ' + esc(g.tv) : ''}</span>`}</div><img src="${esc(g.opp.logo)}" alt="" onerror="this.style.visibility='hidden'"></div>
       <div class="un-foot">${isLive ? 'Tap for the live game summary ›' : `<span class="cd">${esc(countdown(g.date))}</span><span class="gprev" data-prev="${gameRef(t, g)}"></span>`}</div></a>`;
   el.innerHTML = live.length ? `<div class="grid ${live.length > 1 ? 'g2' : ''}" style="margin-top:18px">${live.map(x => card(x, true)).join('')}</div>` : next ? `<div style="margin-top:18px">${card(next, false)}</div>` : '';
   fillPreviewLines(el);

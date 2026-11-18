@@ -30,7 +30,8 @@ async function viewTeam({ parts, q, mount, alive }) {
     if (!alive() || !info) return;
     const has = info.w + info.l + info.tie > 0;
     $('#headStats').innerHTML = `<div class="big-stat"><div class="v">${has ? esc(info.summary) : '—'}</div><div class="l">Record</div></div>
-      <div class="big-stat"><div class="v" style="font-size:1.4rem;padding-top:6px">${esc(info.standingSummary || '—')}</div><div class="l">Standing</div></div>`;
+      <div class="big-stat"><div class="v" style="font-size:1.4rem;padding-top:6px">${esc(info.standingSummary || '—')}</div><div class="l">Standing</div></div>${t.college ? '<div class="big-stat" id="headRank"><div class="v">…</div><div class="l">AP poll</div></div>' : ''}`;
+    if (t.college) safe(collegeRanks(t), []).then(ranks => { const el = $('#headRank'); if (!alive() || !el) return; const ap = ranks.find(r => r.short === 'AP') || ranks[0]; const rv = ranks.find(r => r.short === 'RV' || /receiving/i.test(r.name)); el.innerHTML = `<div class="v"${ap?.us ? '' : ' style="font-size:1.4rem;padding-top:6px"'}>${ap?.us ? '#' + ap.us.rank : 'Unranked'}</div><div class="l">${esc(ap?.short || 'AP')} poll${ap?.us?.prev && ap.us.prev !== ap.us.rank ? ` · was #${ap.us.prev}` : ''}</div>`; });
   });
   // Live score / next game right in the banner, on every tab, refreshed while a game is on.
   const headNow = async () => { const el = $("#headNow"); if (!el) return; const gs = await safe(API.gameStatus(t), null); if (!alive() || !gs) return; el.innerHTML = headNowHtml(t, gs); };
@@ -44,9 +45,9 @@ async function viewTeam({ parts, q, mount, alive }) {
 /** Banner strip: LIVE score while they play, otherwise the next game (with the line) and the last result. */
 function headNowHtml(t, gs) {
   const g = gs.live, n = gs.next, l = gs.last;
-  const lastTxt = l ? `<a class="hn-last" href="javascript:void(0)" data-game="${gameRef(t, l)}">Last: <b class="${l.result === "W" ? "w" : "l"}">${esc(l.result)} ${l.ourScore}–${l.oppScore}</b> ${l.home ? "vs" : "@"} ${esc(l.opp.abbr || l.opp.short)}</a> ${ytLink(l.home ? l.opp.name : t.name, l.home ? t.name : l.opp.name, l.date, 'Highlights')}` : "";
-  if (g) return `<div class="headnow live" data-game="${gameRef(t, g)}"><span class="nl-tag">● Live now</span><b class="hn-score">${g.ourScore ?? 0}–${g.oppScore ?? 0}</b><span class="hn-opp">${g.home ? "vs" : "at"} ${esc(g.opp.short || g.opp.name)}</span><span class="hn-when">${esc(g.detail)}</span>${watchLink(g.tv)}<span class="hn-go">Live game ›</span></div>`;
-  if (n) return `<div class="headnow" data-game="${gameRef(t, n)}"><span class="nl-tag">Next up</span><span class="hn-opp">${n.home ? "vs" : "at"} <b>${esc(n.opp.short || n.opp.name)}</b></span><span class="hn-when">${esc(whenTxt(n.date, n.tbd))}</span>${watchLink(n.tv)}<span data-odds="${gameRef(t, n)}"></span><span class="hn-go">Preview ›</span></div>${lastTxt}`;
+  const lastTxt = l ? `<a class="hn-last" href="javascript:void(0)" data-game="${gameRef(t, l)}">Last: <b class="${l.result === "W" ? "w" : "l"}">${esc(l.result)} ${l.ourScore}–${l.oppScore}</b> ${l.home ? "vs" : "@"} ${rkTag(l.oppRank)}${esc(l.opp.abbr || l.opp.short)}</a> ${ytLink(l.home ? l.opp.name : t.name, l.home ? t.name : l.opp.name, l.date, 'Highlights')}` : "";
+  if (g) return `<div class="headnow live" data-game="${gameRef(t, g)}"><span class="nl-tag">● Live now</span><b class="hn-score">${g.ourScore ?? 0}–${g.oppScore ?? 0}</b><span class="hn-opp">${g.home ? "vs" : "at"} ${rkTag(g.oppRank)}${esc(g.opp.short || g.opp.name)}</span><span class="hn-when">${esc(g.detail)}</span>${watchLink(g.tv)}<span class="hn-go">Live game ›</span></div>`;
+  if (n) return `<div class="headnow" data-game="${gameRef(t, n)}"><span class="nl-tag">Next up</span><span class="hn-opp">${n.home ? "vs" : "at"} <b>${rkTag(n.oppRank)}${esc(n.opp.short || n.opp.name)}</b></span><span class="hn-when">${esc(whenTxt(n.date, n.tbd))}</span>${watchLink(n.tv)}<span data-odds="${gameRef(t, n)}"></span><span class="hn-go">Preview ›</span></div>${lastTxt}`;
   return lastTxt ? `<div class="headnow idle">${lastTxt}</div>` : "";
 }
 
@@ -103,6 +104,7 @@ async function tabOverview(t, { mount, alive }) {
     $('#ovGames').innerHTML = `<h3>Game center</h3><div class="grid g2">${gs.live ? gameBox(t, gs.live, 'LIVE') : gameBox(t, gs.next, 'NEXT')}${gameBox(t, gs.last, 'LAST')}</div>
       ${played.length ? `<div class="row" style="margin-top:14px"><span class="small muted">Recent form</span>${resultDots(played.slice(-8))}</div>` : ''}
       ${upcoming.length ? `<h4 style="margin-top:16px">Coming up</h4><div class="stack" style="gap:6px">${upcoming.map(g => `<div class="row between small click" data-game="${gameRef(t, g)}" style="cursor:pointer"><span class="row" style="gap:8px"><img src="${esc(g.opp.logo)}" width="22" height="22" alt="" onerror="this.style.visibility='hidden'"> ${g.home ? 'vs' : '@'} ${esc(g.opp.name)} <span data-odds="${gameRef(t, g)}"></span></span><span class="muted">${esc(fmtDay(g.date))} · ${esc(fmtTime(g.date))}${g.tv ? ' · ' + esc(g.tv) : ''}</span></div>`).join('')}</div>` : ''}
+      ${resultsListHtml(t, played)}
       <a class="btn small" style="margin-top:14px" href="#/team/${t.key}/schedule">Full schedule &amp; results →</a>`;
   };
   drawGames();
@@ -326,8 +328,8 @@ async function tabSchedule(t, { mount, alive, q }) {
     const cols = [
       { key: 'ts', label: 'Date', sortVal: g => g.ts, fmt: g => `<span>${esc(fmtDate(g.date, { month: 'short', day: 'numeric', year: 'numeric' }))}</span>` },
       { key: 'label', label: 'Round', cls: 'muted', fmt: g => esc(g.label) },
-      { key: 'opp', label: 'Opponent', sortVal: g => g.opp.name, fmt: g => `<div class="pname" data-teamcard="${t.league}|${g.opp.id}" style="cursor:pointer"><span class="dim" style="min-width:22px">${g.home ? 'vs' : '@'}</span><img src="${esc(g.opp.logo)}" style="border-radius:0;background:none;width:24px;height:24px;object-fit:contain" alt="" loading="lazy" onerror="this.style.visibility='hidden'">${esc(g.opp.name)}</div>` },
-      { key: 'result', label: 'Result', fmt: g => (g.state === 'post' ? `${resultChip(g)} <span class="dim small">Box score ›</span>` : g.state === 'in' ? `<span class="badge live">${esc(g.detail)}</span> ${g.ourScore ?? 0}–${g.oppScore ?? 0}` : `<span class="muted">${g.tbd ? 'TBD' : esc(fmtTime(g.date))}</span>${oddsIds.has(g.id) ? `<div data-odds="${gameRef(t, g)}" style="margin-top:3px"></div>` : ''}`) },
+      { key: 'opp', label: 'Opponent', sortVal: g => g.opp.name, fmt: g => `<div class="pname" data-teamcard="${t.league}|${g.opp.id}" style="cursor:pointer"><span class="dim" style="min-width:22px">${g.home ? 'vs' : '@'}</span>${rkTag(g.oppRank)}<img src="${esc(g.opp.logo)}" style="border-radius:0;background:none;width:24px;height:24px;object-fit:contain" alt="" loading="lazy" onerror="this.style.visibility='hidden'">${esc(g.opp.name)}</div>` },
+      { key: 'result', label: 'Result', fmt: g => (g.state === 'post' ? `${resultChip(g)} <span class="dim small">Box score ›</span> ${ytLink(g.home ? g.opp.name : t.name, g.home ? t.name : g.opp.name, g.date, 'Highlights')}` : g.state === 'in' ? `<span class="badge live">${esc(g.detail)}</span> ${g.ourScore ?? 0}–${g.oppScore ?? 0}` : `<span class="muted">${g.tbd ? 'TBD' : esc(fmtTime(g.date))}</span>${oddsIds.has(g.id) ? `<div data-odds="${gameRef(t, g)}" style="margin-top:3px"></div>` : ''}`) },
       { key: 'rec', label: 'Record', num: true, sortVal: g => g.ts, fmt: g => esc(recMap.get(g.id) || '') },
       { key: 'tv', label: 'TV', cls: 'muted', fmt: g => esc(g.tv || '') },
       { key: 'venue', label: 'Venue', cls: 'muted', fmt: g => esc(g.venue || '') },

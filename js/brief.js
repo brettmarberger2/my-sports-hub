@@ -84,7 +84,7 @@ async function renderBrief(t, el, alive) {
     if (!t.mlbId) { const s = await T(6000)(safe(API.gameSummary('espn', t.league, g.id), null)); const p = s?.predict?.[String(t.espnId)]; if (p != null) { const pr = p.toFixed(0); proj = ` · ESPN gives them ${/^(8|11$|18$)/.test(pr) ? 'an' : 'a'} <b>${pr}%</b> chance`; } }
     if (!alive()) return;
     next = gs.live ? `<span class="badge live">Live</span> <b>${g.ourScore ?? 0}–${g.oppScore ?? 0}</b> ${g.home ? 'vs' : 'at'} ${esc(g.opp.name)}, ${esc(g.detail)}. ${watchLink(g.tv, 'Live on')} <a href="javascript:void(0)" data-game="${gameRef(t, g)}">Open the live game ›</a>`
-      : `${g.home ? 'vs' : 'at'} <b>${esc(g.opp.name)}</b> · ${esc(whenTxt(g.date, g.tbd))}${g.tv ? ` on ${esc(g.tv)}` : ''} <span data-odds="${gameRef(t, g)}"></span>${proj}. <a href="javascript:void(0)" data-game="${gameRef(t, g)}">Preview ›</a>`;
+      : `${g.home ? 'vs' : 'at'} <b>${rkTag(g.oppRank)}${esc(g.opp.name)}</b> · ${esc(whenTxt(g.date, g.tbd))}${g.tv ? ` on ${esc(g.tv)}` : ''} <span data-odds="${gameRef(t, g)}"></span>${proj}. <a href="javascript:void(0)" data-game="${gameRef(t, g)}">Preview ›</a>`;
   } else next = 'Nothing on the schedule right now.';
 
   el.innerHTML = `<div class="brief-head"><div><div class="brief-kicker">Catch me up</div><p class="brief-lead">${lead}</p>${picLine}</div></div>
