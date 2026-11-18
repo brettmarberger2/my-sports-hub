@@ -106,7 +106,7 @@ $('#bnav').addEventListener('click', e => {
    Inside a pop-up it steps back one layer; on a page it goes to the previous page. */
 (() => {
   let sx = 0, sy = 0, on = false, t0 = 0;
-  const EDGE = 32, NEED = 72;
+  const EDGE = 44, NEED = 64;
   addEventListener('touchstart', e => {
     const t = e.touches[0]; on = t.clientX <= EDGE && e.touches.length === 1; sx = t.clientX; sy = t.clientY; t0 = Date.now();
   }, { passive: true });

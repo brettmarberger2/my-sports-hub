@@ -106,7 +106,8 @@ async function route() {
    keeps the one underneath, so Back (phone button, ‹ in the pop-up, or Escape) returns to it instead of closing everything.
    Each layer is its own history entry; MODAL.ctx holds a layer's live handlers (its segmented-control draw function). */
 const MODAL = { stack: [], ctx: {} };
-const modalChrome = depth => `<button class="iconbtn x" data-close="all" aria-label="Close">✕</button>${depth ? '<button class="iconbtn mback" data-close aria-label="Back">‹</button>' : ''}`;
+/* One control: ‹ steps back one layer, or closes the pop-up when it is the only layer (same as the edge swipe and the phone's Back). */
+const modalChrome = depth => `<button class="iconbtn mback" data-close aria-label="${depth ? 'Back' : 'Close'}">‹</button>`;
 function openModal(html) {
   const back = $('#modalBack'), open = back.classList.contains('open');
   if (open) MODAL.stack.push({ html: $('#modal').innerHTML, y: back.scrollTop, ctx: MODAL.ctx }); else MODAL.stack = [];
@@ -128,12 +129,14 @@ function restoreModal(depth) {
   const prev = MODAL.stack.pop();
   MODAL.ctx = prev.ctx; $('#modal').innerHTML = prev.html; $('#modalBack').scrollTop = prev.y;
 }
-/** X / backdrop / Escape close every layer; ‹ goes back one. Both step through history so the phone Back button stays in sync. */
+/** ‹ / backdrop / edge swipe go back one layer; Escape closes everything. The screen changes immediately, then history is
+    nudged to match, so the result never depends on how a given phone replays history. */
 function userCloseModal(all) {
-  if (!history.state?.modal) { closeModal(); return; }
-  history.go(all ? -(MODAL.stack.length + 1) : -1);
+  const layers = MODAL.stack.length, hadState = !!history.state?.modal;
+  if (all || !layers) closeModal(); else restoreModal(layers - 1);
+  if (hadState) history.go(all ? -(layers + 1) : -1);
 }
-$('#modalBack').addEventListener('click', e => { const b = e.target.closest('[data-close]'); if (e.target.id === 'modalBack') userCloseModal(true); else if (b) userCloseModal(b.dataset.close === 'all'); });
+$('#modalBack').addEventListener('click', e => { const b = e.target.closest('[data-close]'); if (e.target.id === 'modalBack' || b) userCloseModal(false); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modalBack').classList.contains('open')) userCloseModal(true); });
 /* Segmented controls inside pop-ups go through the layer's ctx, so a restored layer still responds. */
 $('#modal').addEventListener('click', e => {

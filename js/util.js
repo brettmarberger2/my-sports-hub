@@ -126,3 +126,7 @@ const WATCH = [
 const watchUrl = tv => (WATCH.find(([re]) => re.test(tv)) || [])[1] || `https://www.google.com/search?q=${encodeURIComponent('watch ' + tv + ' live stream')}`;
 /** "📺 Peacock ↗" linking to where the network streams. Empty when the game has no listed broadcaster. */
 const watchLink = (tv, label = '') => (tv ? `<a class="tvlink" href="${esc(watchUrl(tv))}" target="_blank" rel="noopener" title="Where to watch">📺 ${label ? esc(label) + ' ' : ''}${esc(tv)} ↗</a>` : '');
+
+/** YouTube search for a finished game's highlight reel, e.g. "Arkansas Razorbacks vs Indiana Hoosiers highlights Nov 17 2026". */
+const ytHighlightsUrl = (awayName, homeName, date) => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${awayName} vs ${homeName} highlights ${fmtDate(date, { month: 'short', day: 'numeric', year: 'numeric' })}`);
+const ytLink = (awayName, homeName, date, label = 'YouTube highlights') => `<a class="tvlink ythl" href="${esc(ytHighlightsUrl(awayName, homeName, date))}" target="_blank" rel="noopener">▶ ${esc(label)} ↗</a>`;
