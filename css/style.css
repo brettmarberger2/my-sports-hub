@@ -943,3 +943,10 @@ table.linescore th, table.linescore td { padding: 8px 10px; } table.linescore .t
 .offbox .lab a { text-transform: none; letter-spacing: 0; font-size: .76rem; font-weight: 700; white-space: nowrap; }
 .offrow .small { white-space: nowrap; }
 .qv-game.flat.offbox .offrow { font-size: .86rem; }
+
+/* ---------- v23: installed-app (home screen) polish ---------- */
+.topbar { padding-top: env(safe-area-inset-top, 0px); }
+/* The tab bar stays above pop-ups, like a native tab bar, so a tap on it always lands. */
+@media (max-width: 960px) { .bnav { z-index: 120; } .modal-back { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }
+/* Standalone mode: no browser chrome, so give the page a solid floor under the tab bar and stop rubber-band gaps. */
+@media (display-mode: standalone) { html { background: var(--bg); overscroll-behavior-y: none; } .bnav { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); } body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } }

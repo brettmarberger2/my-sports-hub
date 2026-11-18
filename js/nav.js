@@ -94,3 +94,27 @@ document.addEventListener('click', e => {
   const upd = () => b.classList.toggle('show', window.scrollY > 1400);
   addEventListener('scroll', upd, { passive: true }); upd();
 })();
+
+/* ---------- Installed-app gestures ---------- */
+/* A tab-bar tap while a pop-up is open closes the pop-up and goes there, instead of being swallowed by the backdrop. */
+$('#bnav').addEventListener('click', e => {
+  const a = e.target.closest('a[href^="#/"]'); if (!a || !$('#modalBack').classList.contains('open')) return;
+  closeModal();
+}, true);
+
+/* Swipe in from the left edge to go back (iOS has no edge-swipe once the site is on the home screen).
+   Inside a pop-up it steps back one layer; on a page it goes to the previous page. */
+(() => {
+  let sx = 0, sy = 0, on = false, t0 = 0;
+  const EDGE = 32, NEED = 72;
+  addEventListener('touchstart', e => {
+    const t = e.touches[0]; on = t.clientX <= EDGE && e.touches.length === 1; sx = t.clientX; sy = t.clientY; t0 = Date.now();
+  }, { passive: true });
+  addEventListener('touchend', e => {
+    if (!on) return; on = false;
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+    if (dx < NEED || dy > 80 || Date.now() - t0 > 900) return;
+    if ($('#modalBack').classList.contains('open')) userCloseModal(false);
+    else if (NAV.stack.length >= 2) history.back();
+  }, { passive: true });
+})();
