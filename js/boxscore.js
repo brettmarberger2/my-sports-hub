@@ -23,6 +23,14 @@ async function espnSummary(lg, id) {
   const teamStats = labels.map(l => ({ label: l, vals: teams.map(t => (tsById.get(t.id) || []).find(x => (x.label || x.name) === l)?.displayValue ?? '') }));
   const players = {};
   (s.boxscore?.players || []).forEach(p => { players[String(p.team.id)] = (p.statistics || []).filter(c => c.athletes?.length).map(c => ({ title: String(c.text || c.name || '').replace(new RegExp(`^(${[p.team.location, p.team.displayName, p.team.shortDisplayName].filter(Boolean).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s+`), ''), labels: c.labels || [], totals: c.totals || [], rows: c.athletes.map(a => ({ id: a.athlete?.id, name: a.athlete?.displayName || '', pos: a.athlete?.position?.abbreviation || '', starter: !!a.starter, dnp: !!a.didNotPlay, stats: a.stats || [] })) })); });
+  // Basketball box scores: the headline numbers first (PTS, REB, AST), then shooting, then the rest; +/- stays when ESPN provides it (NBA).
+  Object.values(players).forEach(list => list.forEach(c => {
+    if (!c.labels.includes("PTS") || !c.labels.includes("REB")) return;
+    const pref = ["MIN", "PTS", "REB", "AST", "STL", "BLK", "FG", "3PT", "FT", "OREB", "DREB", "TO", "PF", "+/-"];
+    const order = [...pref.filter(l => c.labels.includes(l)), ...c.labels.filter(l => !pref.includes(l))].map(l => c.labels.indexOf(l));
+    c.labels = order.map(k => c.labels[k]); c.totals = order.map(k => c.totals[k] ?? "");
+    c.rows.forEach(r => { r.stats = order.map(k => r.stats[k] ?? ""); });
+  }));
   const leaders = (s.leaders || []).map(l => ({ id: String(l.team?.id), abbr: l.team?.abbreviation, items: (l.leaders || []).filter(c => c.leaders?.length).map(c => ({ cat: c.displayName, name: c.leaders[0].athlete?.displayName, pid: c.leaders[0].athlete?.id, value: c.leaders[0].displayValue })) }));
   const byTeamId = id => (comp.competitors || []).find(c => String(c.team.id) === String(id))?.team?.abbreviation || '';
   const perTxt = p => p.period?.displayValue || (lg === 'nfl' || lg === 'nba' ? (p.period?.number ? `Q${p.period.number}` : '') : '');

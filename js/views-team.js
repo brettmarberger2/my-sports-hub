@@ -21,6 +21,7 @@ async function viewTeam({ parts, q, mount, alive }) {
       <div class="meta"><div class="small muted" style="letter-spacing:.12em;text-transform:uppercase">${t.sportName} · Est. ${t.since}</div><h1>${esc(t.name)}</h1>
         <div class="row small muted">${t.college ? `<a class="leaguelink" href="${esc(t.official)}" target="_blank" rel="noopener">IUHoosiers.com ↗</a><span>${esc(t.conf)}</span><span>Bloomington, Indiana</span>` : `<a class="leaguelink" href="#/league/${t.league}">${LEAGUES[t.league].short} standings &amp; leaders ›</a><span>🏆 ${tot.titles} titles</span><span>🏅 ${tot.finals + tot.titles} finals</span><span>📈 ${tot.w}-${tot.l}${tot.t ? '-' + tot.t : ''} all-time</span>`}</div></div>
       <div class="stats" id="headStats"></div>
+      <div class="headnow-wrap" id="headNow"></div>
     </div>
     <div class="tabs" id="tabs">${tabs.map(([k, l]) => `${k === 'coaches' ? '<span class="tabsep">Club &amp; history</span>' : ''}<a href="#/team/${key}/${k}" class="${k === tab ? 'active' : ''}">${l}</a>`).join('')}</div>
     <div id="tabBody">${spinner()}</div>`;
@@ -31,10 +32,22 @@ async function viewTeam({ parts, q, mount, alive }) {
     $('#headStats').innerHTML = `<div class="big-stat"><div class="v">${has ? esc(info.summary) : '—'}</div><div class="l">Record</div></div>
       <div class="big-stat"><div class="v" style="font-size:1.4rem;padding-top:6px">${esc(info.standingSummary || '—')}</div><div class="l">Standing</div></div>`;
   });
+  // Live score / next game right in the banner, on every tab, refreshed while a game is on.
+  const headNow = async () => { const el = $("#headNow"); if (!el) return; const gs = await safe(API.gameStatus(t), null); if (!alive() || !gs) return; el.innerHTML = headNowHtml(t, gs); };
+  headNow(); App.every(() => alive() && headNow(), 45000);
   const fn = { overview: t.college ? tabCollegeOverview : tabOverview, picture: t.college ? tabCollegePicture : tabPicture, leaders: (tt, o) => API.leagueTable(tt.league).then(tb => leagueLeadersTab(tt.league, tb, o.mount, o.alive)), scores: (tt, o) => leagueNewsTab(tt.league, o.mount, o.alive), roster: tabRoster, news: tabNews, injuries: tabInjuries, depth: tabDepth, contracts: tabContracts, stats: tabStats, schedule: tabSchedule, coaches: tabCoaches, history: tabHistory, legends: tabLegends, stadium: tabStadium, shop: tabShop }[tab];
   await fn(t, { mount: $('#tabBody'), q, alive, key });
   if (alive()) $('#tabBody').style.minHeight = '';
   if (alive()) $('#tabBody').style.minHeight = '';
+}
+
+/** Banner strip: LIVE score while they play, otherwise the next game (with the line) and the last result. */
+function headNowHtml(t, gs) {
+  const g = gs.live, n = gs.next, l = gs.last;
+  const lastTxt = l ? `<a class="hn-last" href="javascript:void(0)" data-game="${gameRef(t, l)}">Last: <b class="${l.result === "W" ? "w" : "l"}">${esc(l.result)} ${l.ourScore}–${l.oppScore}</b> ${l.home ? "vs" : "@"} ${esc(l.opp.abbr || l.opp.short)}</a>` : "";
+  if (g) return `<a class="headnow live" href="javascript:void(0)" data-game="${gameRef(t, g)}"><span class="nl-tag">● Live now</span><b class="hn-score">${g.ourScore ?? 0}–${g.oppScore ?? 0}</b><span class="hn-opp">${g.home ? "vs" : "at"} ${esc(g.opp.short || g.opp.name)}</span><span class="hn-when">${esc(g.detail)}</span><span class="hn-go">Live game ›</span></a>`;
+  if (n) return `<a class="headnow" href="javascript:void(0)" data-game="${gameRef(t, n)}"><span class="nl-tag">Next up</span><span class="hn-opp">${n.home ? "vs" : "at"} <b>${esc(n.opp.short || n.opp.name)}</b></span><span class="hn-when">${esc(whenTxt(n.date, n.tbd))}${n.tv ? " · " + esc(n.tv) : ""}</span><span data-odds="${gameRef(t, n)}"></span><span class="hn-go">Preview ›</span></a>${lastTxt}`;
+  return lastTxt ? `<div class="headnow idle">${lastTxt}</div>` : "";
 }
 
 /* ---------- Overview ---------- */
