@@ -85,7 +85,12 @@ const API = {
     const { games } = await API.schedule(t);
     const now = Date.now();
     let live = games.find(g => g.state === 'in');
-    if (!live) { const sb = await API.scoreboardGame(t); if (sb && sb.state === 'in') live = sb; }
+    // The team-schedule feed flags a game as in progress but often carries no score until it ends, and it is cached for
+    // 90s. The scoreboard is fresh (20s) and always has the score, so whenever anything looks live, read it from there.
+    const sb = await API.scoreboardGame(t);
+    if (sb && sb.state === 'in') live = live && live.id === sb.id ? { ...live, ...sb, label: live.label || sb.label, stype: live.stype } : sb;
+    else if (live && sb && sb.id === live.id) live = null;   // the scoreboard already says it is over
+    if (live && (live.ourScore == null || live.oppScore == null)) { live.ourScore ??= 0; live.oppScore ??= 0; }
     const reg = games.filter(g => g.stype !== 1 || games.every(x => x.stype === 1)); // ignore preseason if real games exist
     const next = reg.find(g => g.state === 'pre' && g.ts > now - 3 * 3600e3) || null;
     const last = [...reg].reverse().find(g => g.state === 'post') || null;

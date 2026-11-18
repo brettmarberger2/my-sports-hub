@@ -11,7 +11,7 @@ Object.assign(API, {
       const prev = await safe(API.schedule(t, startYear - 1), null);
       if (prev) list = [...prev.games.filter(g => g.state === 'post').slice(-(n - list.length)), ...list];
     }
-    const live = r.games.find(g => g.state === 'in') || (await API.scoreboardGame(t).then(g => (g && g.state === 'in' ? g : null)));
+    const live = (await API.gameStatus(t)).live;   // scoreboard-backed, so the score is real while the game is on
     const next = r.games.find(g => g.state === 'pre' && g.stype !== 1 && g.ts > Date.now() - 3 * 3600e3) || null;
     return { live, list, next };
   },
